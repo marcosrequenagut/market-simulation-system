@@ -1,6 +1,7 @@
 import pytest
 from app.engine.calculator import calculate_cagr
 
+
 def test_cagr_basic():
     """1000 -> 2500 over 10 years = ~9.6%"""
     result = calculate_cagr(1000, 2500, 10)
