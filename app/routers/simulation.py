@@ -5,6 +5,7 @@ from app.engine.montecarlo import run_monter_carlo, run_monter_carlo_lognormal
 
 router = APIRouter(prefix="/simulate", tags=["simulation"])
 
+
 class SimulationRequest(BaseModel):
     initial_investment: float
     monthly_contribution: float = 0.0
@@ -12,6 +13,7 @@ class SimulationRequest(BaseModel):
     years: int
     simulations: int = 1000
     model: str = "lognormal"
+
 
 @router.post("/")
 def simulate(request: SimulationRequest):
@@ -28,13 +30,13 @@ def simulate(request: SimulationRequest):
             request.annual_rate,
             request.years
         )
-    
+
         cagr_result = calculate_cagr(
             request.initial_investment,
             request.initial_investment * (1 + request.annual_rate) ** request.years,
             request.years
         )
-    
+
         if request.model == "lognormal":
             monte_carlo_result = run_monter_carlo_lognormal(
                 request.initial_investment,
@@ -51,7 +53,7 @@ def simulate(request: SimulationRequest):
                 request.years,
                 request.simulations
             )
-    
+
         return {
             "compound_interest": compound_result,
             "cagr": round(cagr_result, 4),
