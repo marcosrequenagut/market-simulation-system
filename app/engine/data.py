@@ -1,5 +1,6 @@
 import yfinance as yf
 
+
 def get_sp500_data(period: str = "10y") -> dict:
     """
     Fetch historical S&P 500 data using yfinance.
@@ -21,20 +22,23 @@ def get_sp500_data(period: str = "10y") -> dict:
 
     if period not in valid_periods:
         raise ValueError(f"Invalid period. Must be one of: {valid_periods}")
-    
+
+
     # Fetch data
     ticker = yf.Ticker("^GSPC")
     hist = ticker.history(period=period) # df with daily data
-    
+
     if hist.empty:
         raise ValueError("No data available for the specified period")
-    
+
     daily_returns = hist["Close"].pct_change().dropna() # daily returns, it takes the current price and divides it by the previous price
+
 
     # We multiply by 252 because the market is open ~252 days a year
     annual_return = float(daily_returns.mean() * 252)
     annual_volatility = float(daily_returns.std() * (252 ** 0.5))
-    
+
+
     return {
         "period": period,
         "annual_return": round(annual_return, 4),

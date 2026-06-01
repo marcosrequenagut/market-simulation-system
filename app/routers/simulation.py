@@ -64,6 +64,7 @@ def simulate(request: SimulationRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.get("/sp500/{period}")
 def get_sp500(period: str = "10y"):
     """
