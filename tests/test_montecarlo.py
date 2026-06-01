@@ -199,7 +199,7 @@ def test_monter_carlo_lognormal_low_simulations():
     """Minimum number of simulations with lognormal"""
     random.seed(42)
     result = run_monter_carlo_lognormal(1000, 0.10, 0.15, 5, 1)
-    
+
     assert result["simulations"] == 1
     assert result["min"] == result["max"]  # Only one simulation
 
