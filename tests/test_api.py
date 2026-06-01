@@ -106,6 +106,22 @@ def test_compare_strategies_basic():
 def test_compare_strategies_invalid_count():
     """Less than 2 strategies returns 400"""
     response = client.post("/compare", json={
+        "years": 5,
+        "strategies": [
+            {
+                "name": "Conservative",
+                "initial_investment": 10000,
+                "monthly_contribution": 500,
+                "annual_rate": 0.05
+            }
+        ]
+    })
+    assert response.status_code == 400
+
+
+def test_compare_strategies_invalid_years():
+    """A year equal or fewer than 0 returns 400"""
+    response = client.post("/compare", json={
         "years": 0,
         "strategies": [
             {
@@ -124,17 +140,32 @@ def test_compare_strategies_invalid_count():
     })
     assert response.status_code == 400
 
-def test_compare_strategies_invalid_years():
-    """A year equal or fewer than 0 returns 400"""
+
+def test_compare_strategies_exception(monkeypatch):
+    def boom(*args, **kwargs):
+        raise ValueError("forced error")
+
+    monkeypatch.setattr(
+        "app.routers.compare.calculate_compound_interest",
+        boom
+    )
+
     response = client.post("/compare", json={
         "years": 10,
         "strategies": [
             {
-                "name": "Single",
+                "name": "A",
                 "initial_investment": 10000,
                 "monthly_contribution": 500,
-                "annual_rate": 0.07
+                "annual_rate": 0.05
+            },
+            {
+                "name": "B",
+                "initial_investment": 10000,
+                "monthly_contribution": 500,
+                "annual_rate": 0.10
             }
         ]
     })
+
     assert response.status_code == 400
