@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.engine.calculator import calculate_cagr, calculate_compound_interest
 from app.engine.montecarlo import run_monter_carlo, run_monter_carlo_lognormal
+from app.engine.data import get_sp500_data
 
 router = APIRouter(prefix="/simulate", tags=["simulation"])
 
@@ -60,5 +61,15 @@ def simulate(request: SimulationRequest):
             "monte_carlo": monte_carlo_result
         }
 
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/sp500/{period}")
+def get_sp500(period: str = "10y"):
+    """
+    Get real S&P 500 historical data and calculate statistics.
+    """
+    try:
+        return get_sp500_data(period)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
