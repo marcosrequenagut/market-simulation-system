@@ -46,3 +46,30 @@ def test_simulate_gaussian_model():
     })
     assert response.status_code == 200
     assert response.json()["monte_carlo"]["simulations"] == 1000
+
+
+def test_metrics_basic():
+    """Basic metrics calculation returns expected keys"""
+    response = client.post("/metrics", json={
+        "initial_value": 1000,
+        "final_value": 2500,
+        "years": 10,
+        "annual_volatility": 0.15
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert "cagr" in data
+    assert "total_return" in data
+    assert "shape_ratio" in data
+    assert "annual_volatility" in data
+
+
+def test_metrics_invalid_input():
+    """Invalid input (zero initial value) returns 400"""
+    response = client.post("/metrics", json={
+        "initial_value": 0,
+        "final_value": 2500,
+        "years": 10,
+        "annual_volatility": 0.15
+    })
+    assert response.status_code == 400
