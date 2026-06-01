@@ -35,4 +35,3 @@ def test_cagr_negative_final_value():
     """Negative final value must raise ValueError"""
     with pytest.raises(ValueError):
         calculate_cagr(1000, -2500, 10)
-
