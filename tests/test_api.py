@@ -73,3 +73,47 @@ def test_metrics_invalid_input():
         "annual_volatility": 0.15
     })
     assert response.status_code == 400
+
+
+def test_compare_strategies_basic():
+    """Basic comparison of multiple strategies returns expected structure"""
+    response = client.post("/compare", json={
+        "years": 10,
+        "strategies": [
+            {
+                "name": "Conservative",
+                "initial_investment": 10000,
+                "monthly_contribution": 500,
+                "annual_rate": 0.05
+            },
+            {
+                "name": "Aggressive",
+                "initial_investment": 10000,
+                "monthly_contribution": 500,
+                "annual_rate": 0.10
+            }
+        ]
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert "years" in data
+    assert "winner" in data
+    assert "strategies" in data
+    assert len(data["strategies"]) == 2
+    assert data["strategies"][0]["final_value"] >= data["strategies"][1]["final_value"]
+
+
+def test_compare_strategies_invalid_count():
+    """Less than 2 strategies returns 400"""
+    response = client.post("/compare", json={
+        "years": 10,
+        "strategies": [
+            {
+                "name": "Single",
+                "initial_investment": 10000,
+                "monthly_contribution": 500,
+                "annual_rate": 0.07
+            }
+        ]
+    })
+    assert response.status_code == 400
