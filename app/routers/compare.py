@@ -12,6 +12,7 @@ class Strategy(BaseModel):
     monthly_contribution: float = 0.0
     annual_rate: float
 
+
 class CompareRequest(BaseModel):
     years: int
     strategies: list[Strategy]
@@ -55,16 +56,16 @@ def compare_strategies(request: CompareRequest):
                 "total_invested": result["total_invested"],
                 "total_interes": result["total_interest"]
             })
-        
+
         # Sort by final value (descending)
         results.sort(key=lambda x: x["final_value"], reverse=True)
-        
+
         return {
             "years": request.years,
             "winner": results[0]["name"],
             "strategies": results
         }
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=400,
