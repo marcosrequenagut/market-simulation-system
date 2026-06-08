@@ -11,7 +11,7 @@ class SP500Price(Base):
 
     __tablename__ = "sp500_prices"
 
-    data = Column(Date, primary_key=True)
+    date = Column(Date, primary_key=True)
     open = Column(Double)
     high = Column(Double)
     low = Column(Double)
@@ -20,7 +20,7 @@ class SP500Price(Base):
 
     def to_dict(self):
         return {
-            "data": self.data.isoformat(),
+            "date": self.date.isoformat(),
             "open": self.open,
             "high": self.high,
             "low": self.low,

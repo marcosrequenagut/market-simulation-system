@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta, datetime
 from sqlalchemy.orm import Session
 from app.core.models import SP500Price
 
@@ -75,3 +75,25 @@ def get_daily_returns(
         })
 
     return returns
+
+
+def get_price_since(
+    session: Session,
+    cutoff_date: date
+) -> list[SP500Price]:
+    """
+    Get S&P 500 prices since a given cutoff date.
+
+    Args:
+        session: SQLAlchemy session
+        cutoff_date: Start date to fetch prices from
+
+    Returns:
+        List of SP500Price objects ordered by date ascending
+    """
+    return (
+        session.query(SP500Price)
+        .filter(SP500Price.date >= cutoff_date)
+        .order_by(SP500Price.date.asc())
+        .all()
+    )

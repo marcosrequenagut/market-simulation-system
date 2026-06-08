@@ -1,8 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..core.db import get_db
-from app.core.queries import get_prices, get_latest_price, get_daily_returns
+from app.core.queries import get_prices, get_latest_price, get_daily_returns, get_price_since
 
 
 router = APIRouter(prefix="/sp500", tags=["sp500"])
@@ -47,6 +48,30 @@ def daily_returns(
     Optional filters: start_date, end_date.
     """
     data = get_daily_returns(db, start_date, end_date)
+    if not data:
+        raise HTTPException(status_code=404, detail="No data found")
+    return data
+
+
+@router.get("/prices/history")
+def price_history(
+    years: int = None,
+    days: int = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Get S&P 500 price history.
+    Provide either years or days as filter.
+    Default: 20 years.
+    """
+    if years is None and days is None:
+        cutoff_date = date.today() - relativedelta(years=20)
+    elif years is not None:
+        cutoff_date = date.today() - relativedelta(years=years)
+    else:
+        cutoff_date = date.today() - timedelta(days=days)
+
+    data = get_price_since(db, cutoff_date)
     if not data:
         raise HTTPException(status_code=404, detail="No data found")
     return [row.to_dict() for row in data]

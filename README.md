@@ -10,3 +10,7 @@ python -m uvicorn app.main:app --reload
 ```bash
 python -m data_pipeline.load_initial_data_into_postgres_db
 ```
+
+# Si de un dia para otro se ejecuta la API hay que asegurarse de que los datos de la base de datos están actualizados hasta el ultimo dia por eso jhay que ejecutar este scirpt: si al menos llevamos 1 o mas dias sin ejecutarlo:
+
+docker exec -it sp500_backend python app/data_pipeline/get_all_historical_data.py
