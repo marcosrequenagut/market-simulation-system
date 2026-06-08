@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from sqlalchemy.orm import Session
 from app.core.models import SP500Price
 
