@@ -1,6 +1,6 @@
 from datetime import date
 from sqlalchemy.orm import Session
-from models import SP500Price
+from app.core.models import SP500Price
 
 
 def get_prices(
