@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS sp500_prices(
+    date DATE PRIMARY KEY,
+    open DOUBLE PRECISION,
+    high DOUBLE PRECISION,
+    low DOUBLE PRECISION,
+    close DOUBLE PRECISION,
+    volume BIGINT
+);

@@ -5,3 +5,8 @@ A financial portfolio simulation and analytics platform for modeling investment 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
+
+# To run whne de app. method is not detected
+```bash
+python -m data_pipeline.load_initial_data_into_postgres_db
+```

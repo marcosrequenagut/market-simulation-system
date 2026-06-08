@@ -3,7 +3,7 @@ import yfinance as yf
 
 def get_sp500_data(period: str = "10y") -> dict:
     """
-    Fetch historical S&P 500 data using yfinance.
+    Fetch historical metrics for S&P 500 using yfinance.
 
     Args:
         period: Time period to fetch (1y, 5y, 10y, max)
