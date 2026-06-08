@@ -7,3 +7,4 @@ flake8==7.1.1
 pytest-cov==5.0.0
 coverage==7.6.1
 sqlalchemy
+psycopg2
