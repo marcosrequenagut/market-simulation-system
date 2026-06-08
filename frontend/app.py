@@ -13,7 +13,7 @@ st.set_page_config(
 
 st.title("📈 S&P 500 Analyzer")
 
-# --- TOP METRICS ---
+# Calculate the metrics
 # A 7-day window is used to account for weekends and market holidays.
 # In practice, we retrieve the latest available trading days rather than seven actual trading days,
 # ensuring that at least two market days are available for calculations.
@@ -42,7 +42,7 @@ with col2:
 
 st.divider()
 
-# --- TIME RANGE SELECTOR ---
+# Select time range
 st.subheader("S&P 500 Price History")
 
 range_options = {
@@ -68,7 +68,7 @@ data = requests.get(f"{API_URL}/sp500/prices/history", params=params).json()
 dates = [row["date"] for row in data]
 closes = [row["close"] for row in data]
 
-# --- CHART ---
+# Make the chart
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(

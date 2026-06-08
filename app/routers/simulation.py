@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.engine.calculator import calculate_cagr, calculate_compound_interest
-from app.engine.montecarlo import run_monter_carlo, run_monter_carlo_lognormal
+from app.engine.montecarlo import run_monte_carlo, run_monte_carlo_lognormal
 from app.engine.data import get_sp500_data
 
 router = APIRouter(prefix="/simulate", tags=["simulation"])
@@ -39,15 +39,16 @@ def simulate(request: SimulationRequest):
         )
 
         if request.model == "lognormal":
-            monte_carlo_result = run_monter_carlo_lognormal(
+            monte_carlo_result = run_monte_carlo_lognormal(
                 request.initial_investment,
                 request.annual_rate,
                 0.15,
                 request.years,
-                request.simulations
+                request.simulations,
+                request.monthly_contribution
             )
         else:
-            monte_carlo_result = run_monter_carlo(
+            monte_carlo_result = run_monte_carlo(
                 request.initial_investment,
                 request.annual_rate,
                 0.15,

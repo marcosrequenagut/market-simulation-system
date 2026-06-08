@@ -2,7 +2,7 @@ import random
 import math
 
 
-def run_monter_carlo(
+def run_monte_carlo(
     initial_investment: float,
     annual_return: float,
     annual_volatility: float,
@@ -59,31 +59,14 @@ def run_monter_carlo(
     }
 
 
-def run_monter_carlo_lognormal(
+def run_monte_carlo_lognormal(
     initial_investment: float,
     annual_return: float,
     annual_volatility: float,
     years: int,
-    simulations: int = 1000
+    simulations: int = 1000,
+    monthly_contribution: float = 0.0
 ):
-    """
-    Run a Monte Carlo simulation using lognormal distribution.
-    More realistic than Gaussian as it prevents negative portfolio values.
-
-    Args:
-        initial_investment: Initial amount invested
-        annual_return: Expected annual return as decimal (0.10 = 10%)
-        annual_volatility: Annual volatility as decimal (0.15 = 15%)
-        years: Number of years to simulate
-        simulations: Number of simulation runs (default 1000)
-
-    Returns:
-        Dictionary with percentile results: p10, p50, p90, min, max
-
-    Raises:
-        ValueError: If any value is invalid
-    """
-
     if initial_investment <= 0:
         raise ValueError("Initial investment must be greater than 0")
     if years <= 0:
@@ -94,15 +77,16 @@ def run_monter_carlo_lognormal(
         raise ValueError("Volatility cannot be negative")
 
     results = []
-
     mu = math.log(1 + annual_return) - 0.5 * annual_volatility ** 2
     sigma = annual_volatility
+    monthly_rate = mu / 12
+    monthly_sigma = sigma / (12 ** 0.5)
 
     for _ in range(simulations):
         balance = initial_investment
-        for _ in range(years):
-            yearly_return = random.gauss(mu, sigma)
-            balance *= math.exp(yearly_return)
+        for _ in range(years * 12):
+            monthly_return = random.gauss(monthly_rate, monthly_sigma)
+            balance = balance * math.exp(monthly_return) + monthly_contribution
         results.append(round(balance, 2))
 
     results.sort()
