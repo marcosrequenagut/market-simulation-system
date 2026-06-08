@@ -11,6 +11,7 @@ app.include_router(metrics_router)
 app.include_router(compare_router)
 app.include_router(sp500_router)
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

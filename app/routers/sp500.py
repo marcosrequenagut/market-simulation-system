@@ -2,7 +2,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..core.db import get_db
-from app.core.queries  import get_prices, get_latest_price, get_daily_returns
+from app.core.queries import get_prices, get_latest_price, get_daily_returns
 
 
 router = APIRouter(prefix="/sp500", tags=["sp500"])
@@ -24,6 +24,7 @@ def prices(
         raise HTTPException(status_code=404, detail="No data found")
     return [row.to_dict() for row in data]
 
+
 @router.get("/latest")
 def latest_price(db: Session = Depends(get_db)):
     """
@@ -33,6 +34,7 @@ def latest_price(db: Session = Depends(get_db)):
     if not data:
         raise HTTPException(status_code=404, detail="No data found")
     return data.to_dict()
+
 
 @router.get("/returns")
 def daily_returns(
