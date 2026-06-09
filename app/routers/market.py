@@ -72,11 +72,11 @@ def available_tickers(db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/{ticker}/prices", responses={404: {"description": "No data found"}})
 def prices(
+    db: Annotated[Session, Depends(get_db)],
     ticker: str,
     start_date: date = None,
     end_date: date = None,
-    limit: int = 100,
-    db: Annotated[Session, Depends(get_db)]
+    limit: int = 100
 ):
     """
     Get historical prices for a ticker.
@@ -101,10 +101,10 @@ def latest_price(ticker: str, db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/{ticker}/returns", responses={404: {"description": "No data found"}})
 def daily_returns(
+    db: Annotated[Session, Depends(get_db)],
     ticker: str,
     start_date: date = None,
-    end_date: date = None,
-    db: Annotated[Session, Depends(get_db)]
+    end_date: date = None
 ):
     """
     Get daily returns for a ticker.
@@ -118,10 +118,10 @@ def daily_returns(
 
 @router.get("/{ticker}/history", responses={404: {"description": "No data found"}})
 def price_history(
+    db: Annotated[Session, Depends(get_db)],
     ticker: str,
     years: int = None,
-    days: int = None,
-    db: Annotated[Session, Depends(get_db)]
+    days: int = None
 ):
     """
     Get price history for a ticker. Provide years or days as filter.
