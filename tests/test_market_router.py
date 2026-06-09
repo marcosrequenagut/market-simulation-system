@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from datetime import date, timedelta
+from datetime import date
 from fastapi.testclient import TestClient
 from app.main import app
 from app.core.db import get_db

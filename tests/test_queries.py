@@ -1,14 +1,13 @@
 from datetime import date
 from unittest.mock import MagicMock
 from app.core.queries import (
-    get_prices,
     get_available_tickers,
-    get_last_date_for_ticker,
     get_latest_price,
     get_daily_returns,
     get_annualized_return
 )
 from app.core.models import MarketPrice
+
 
 def make_price(d: date, close: float, ticker: str = "^GSPC") -> MarketPrice:
     """Helper to create a fake MarketPrice object."""
