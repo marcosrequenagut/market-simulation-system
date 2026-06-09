@@ -13,7 +13,7 @@ class MetricsRequest(BaseModel):
     annual_volatility: float = 0.15
 
 
-@router.post("/")
+@router.post("/", responses={400: {"description": "Invalid input parameters"}})
 def get_metrics(request: MetricsRequest):
     """
     Calculate key investment metrics.

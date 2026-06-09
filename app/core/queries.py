@@ -190,3 +190,32 @@ def get_annualized_return(session: Session, ticker: str) -> dict:
         "annual_volatility": round(annual_volatility, 4),
         "cagr": round(cagr, 4)
     }
+
+
+def get_prices_since_multiple_tickers(
+    session: Session,
+    tickers: list[str],
+    cutoff_date: date
+) -> dict:
+    """
+    Get prices for multiple tickers since a cutoff date.
+
+    Args:
+        session: SQLAlchemy session
+        tickers: List of ticker symbols
+        cutoff_date: Cutoff date
+
+    Returns:
+        Dictionary with ticker as key and list of prices as value
+    """
+    result = {}
+    for ticker in tickers:
+        prices = (
+            session.query(MarketPrice)
+            .filter(MarketPrice.ticker == ticker)
+            .filter(MarketPrice.date >= cutoff_date)
+            .order_by(MarketPrice.date.asc())
+            .all()
+        )
+        result[ticker] = prices
+    return result

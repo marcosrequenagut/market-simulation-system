@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+from pydantic import BaseModel
+from typing import Annotated
 from dateutil.relativedelta import relativedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -9,15 +11,59 @@ from app.core.queries import (
     get_daily_returns,
     get_price_since,
     get_available_tickers,
-    get_annualized_return
+    get_annualized_return,
+    get_prices_since_multiple_tickers
 )
 
 
 router = APIRouter(prefix="/market", tags=["market"])
 NO_DATA_FOUND = "No data found"
 
+
+class CompareRequest(BaseModel):
+    ticker: list[str],
+    years: int = None,
+    days: int = None
+
+
+@router.post("/compare", responses={400: {"description": "At least 2 tickers are required"}})
+def compare_tickers(request: CompareRequest, db: Annotated[Session, Depends(get_db)]):
+    """
+    Get normalized price history (base 100) for multiple tickers.
+    """
+    if len(request.tickers) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="At least 2 tickers are required"
+        )
+
+    if request.years is None and request.days is None:
+        cutoff_date = date.today() - relativedelta(years=1)
+    elif request.years is not None:
+        cutoff_date = date.today() - relativedelta(years=request.years)
+    elif request.days is not None:
+        cutoff_date = date.today() - timedelta(days=request.days)
+
+    data = get_prices_since_multiple_tickers(db, request.tickers, cutoff_date)
+
+    result = {}
+    for ticker, prices in data.items():
+        if not prices:
+            continue
+        base = prices[0].close
+        result[ticker] = [
+            {
+                "date": p.date.isoformat(),
+                "value": round((p.close / base) * 100, 4)
+            }
+            for p in prices
+        ]
+
+    return result
+
+
 @router.get("/tickers")
-def available_tickers(db: Session = Depends(get_db)):
+def available_tickers(db: Annotated[Session, Depends(get_db)]):
     """
     Get available tickers in the database.
     """
@@ -30,7 +76,7 @@ def prices(
     start_date: date = None,
     end_date: date = None,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Get historical prices for a ticker.
@@ -43,7 +89,7 @@ def prices(
 
 
 @router.get("/{ticker}/latest", responses={404: {"description": "No data found"}})
-def latest_price(ticker: str, db: Session = Depends(get_db)):
+def latest_price(ticker: str, db: Annotated[Session, Depends(get_db)]):
     """
     Get the latest price for a ticker..
     """
@@ -58,7 +104,7 @@ def daily_returns(
     ticker: str,
     start_date: date = None,
     end_date: date = None,
-    db: Session = Depends(get_db)
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Get daily returns for a ticker.
@@ -75,7 +121,7 @@ def price_history(
     ticker: str,
     years: int = None,
     days: int = None,
-    db: Session = Depends(get_db)
+    db: Annotated[Session, Depends(get_db)]
 ):
     """
     Get price history for a ticker. Provide years or days as filter.
@@ -96,7 +142,7 @@ def price_history(
 
 
 @router.get("/{ticker}/stats", responses={404: {"description": "No data found"}})
-def ticker_stats(ticker: str, db: Session = Depends(get_db)):
+def ticker_stats(ticker: str, db: Annotated[Session, Depends(get_db)]):
     """
     Get annualized return for a ticker.
     """
