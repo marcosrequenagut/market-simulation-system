@@ -21,8 +21,8 @@ NO_DATA_FOUND = "No data found"
 
 
 class CompareRequest(BaseModel):
-    ticker: list[str],
-    years: int = None,
+    ticker: list[str]
+    years: int = None
     days: int = None
 
 
