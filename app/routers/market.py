@@ -14,7 +14,7 @@ from app.core.queries import (
 
 
 router = APIRouter(prefix="/market", tags=["market"])
-
+NO_DATA_FOUND = "No data found"
 
 @router.get("/tickers")
 def available_tickers(db: Session = Depends(get_db)):
@@ -24,7 +24,7 @@ def available_tickers(db: Session = Depends(get_db)):
     return get_available_tickers(db)
 
 
-@router.get("/{ticker}/prices")
+@router.get("/{ticker}/prices", responses={404: {"description": "No data found"}})
 def prices(
     ticker: str,
     start_date: date = None,
@@ -38,22 +38,22 @@ def prices(
     """
     data = get_prices(db, ticker, start_date, end_date, limit)
     if not data:
-        raise HTTPException(status_code=404, detail="No data found")
+        raise HTTPException(status_code=404, detail=NO_DATA_FOUND)
     return [row.to_dict() for row in data]
 
 
-@router.get("/{ticker}/latest")
+@router.get("/{ticker}/latest", responses={404: {"description": "No data found"}})
 def latest_price(ticker: str, db: Session = Depends(get_db)):
     """
     Get the latest price for a ticker..
     """
     data = get_latest_price(db, ticker)
     if not data:
-        raise HTTPException(status_code=404, detail="No data found")
+        raise HTTPException(status_code=404, detail=NO_DATA_FOUND)
     return data.to_dict()
 
 
-@router.get("/{ticker}/returns")
+@router.get("/{ticker}/returns", responses={404: {"description": "No data found"}})
 def daily_returns(
     ticker: str,
     start_date: date = None,
@@ -66,11 +66,11 @@ def daily_returns(
     """
     data = get_daily_returns(db, ticker, start_date, end_date)
     if not data:
-        raise HTTPException(status_code=404, detail="No data found")
+        raise HTTPException(status_code=404, detail=NO_DATA_FOUND)
     return data
 
 
-@router.get("/{ticker}/history")
+@router.get("/{ticker}/history", responses={404: {"description": "No data found"}})
 def price_history(
     ticker: str,
     years: int = None,
@@ -91,16 +91,16 @@ def price_history(
 
     data = get_price_since(db, ticker, cutoff_date)
     if not data:
-        raise HTTPException(status_code=404, detail="No data found")
+        raise HTTPException(status_code=404, detail=NO_DATA_FOUND)
     return [row.to_dict() for row in data]
 
 
-@router.get("/{ticker}/stats")
+@router.get("/{ticker}/stats", responses={404: {"description": "No data found"}})
 def ticker_stats(ticker: str, db: Session = Depends(get_db)):
     """
     Get annualized return for a ticker.
     """
     data = get_annualized_return(db, ticker)
     if not data:
-        raise HTTPException(status_code=404, detail="No data found")
+        raise HTTPException(status_code=404, detail=NO_DATA_FOUND)
     return data

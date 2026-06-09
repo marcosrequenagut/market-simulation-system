@@ -93,6 +93,7 @@ if st.button("Simulate", type="primary", use_container_width=True):
         "initial_investment": initial_investment,
         "monthly_contribution": monthly_contribution,
         "annual_rate": annual_rate,
+        "annual_volatility": stats.get("annual_volatility", 0.15),
         "years": years,
         "simulations": 1000,
         "model": "lognormal"

@@ -18,7 +18,7 @@ class CompareRequest(BaseModel):
     strategies: list[Strategy]
 
 
-@router.post("/")
+@router.post("/", responses={400: {"description": "Invalid request"}})
 def compare_strategies(request: CompareRequest):
     """
     Compare multiple investments strategies side by side.
