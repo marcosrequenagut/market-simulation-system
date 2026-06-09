@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 from sqlalchemy.orm import Session
 from app.core.models import MarketPrice
 import math
@@ -125,7 +126,7 @@ def get_available_tickers(session: Session) -> list[str]:
     return [r[0] for r in results]
 
 
-def get_last_date_for_ticker(session: Session, ticker: str) -> date | None:
+def get_last_date_for_ticker(session: Session, ticker: str) -> Optional[date]:
     """
     Get the last date for a given ticker.
 
