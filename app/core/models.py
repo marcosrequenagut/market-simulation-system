@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, Double, BigInteger
+from sqlalchemy import Column, Date, Double, BigInteger, String
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -6,12 +6,13 @@ class Base(DeclarativeBase):
     pass
 
 
-class SP500Price(Base):
-    """SQLAlchemy model for sp500_prices table."""
+class MarketPrice(Base):
+    """SQLAlchemy model for market_prices table."""
 
-    __tablename__ = "sp500_prices"
+    __tablename__ = "market_prices"
 
     date = Column(Date, primary_key=True)
+    ticker = Column(String(20), primary_key=True)
     open = Column(Double)
     high = Column(Double)
     low = Column(Double)
@@ -21,6 +22,7 @@ class SP500Price(Base):
     def to_dict(self):
         return {
             "date": self.date.isoformat(),
+            "ticker": self.ticker,
             "open": self.open,
             "high": self.high,
             "low": self.low,

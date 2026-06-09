@@ -4,24 +4,43 @@ import requests
 from datetime import datetime
 
 API_URL = "http://backend:8000"
+DEFAULT_TICKER = "^GSPC"
 
 st.set_page_config(
-    page_title="S&P 500 Analyzer",
+    page_title="Market Analyzer",
     page_icon="📈",
     layout="wide"
 )
 
-st.title("📈 S&P 500 Analyzer")
+st.title("📈 Market Analyzer")
+
+# Select ticker
+col_ticker, col_empty = st.columns([1, 3])
+with col_ticker:
+    ticker = st.selectbox(
+        "Select Index",
+        options=["^GSPC", "^DJI", "^IXIC", "^FTSE", "^DAX", "^FCHI", "^N225", "^HSI", "GC=F", "BTC-USD"],
+        format_func=lambda x: {
+            "^GSPC": "S&P 500",
+            "^DJI": "Dow Jones",
+            "^IXIC": "NASDAQ",
+            "^FTSE": "FTSE 100",
+            "^DAX": "DAX",
+            "^FCHI": "CAC 40",
+            "^N225": "Nikkei 225",
+            "^HSI": "Hang Seng",
+            "GC=F": "Gold",
+            "BTC-USD": "Bitcoin"
+        }.get(x, x)
+    )
 
 # Calculate the metrics
-# A 7-day window is used to account for weekends and market holidays.
-# In practice, we retrieve the latest available trading days rather than seven actual trading days,
-# ensuring that at least two market days are available for calculations.
-latest = requests.get(f"{API_URL}/sp500/latest").json()
-prices_2d = requests.get(f"{API_URL}/sp500/prices/history", params={"days": 7}).json() # 7 days to cover all the week, not counting weekends
+latest = requests.get(f"{API_URL}/market/{ticker}/latest").json()
+prices_2d = requests.get(f"{API_URL}/market/{ticker}/prices", params={"limit": 2}).json()
+prices_2d = list(reversed(prices_2d))
 
-today_price = latest["close"]
-yesterday_price = prices_2d[-2]["close"] if len(prices_2d) >= 7 else today_price # 7 days to cover all the week, not counting weekends
+today_price = prices_2d[-1]["close"]
+yesterday_price = prices_2d[-2]["close"] if len(prices_2d) >= 2 else today_price
 change = today_price - yesterday_price
 change_pct = (change / yesterday_price) * 100
 color = "normal" if change >= 0 else "inverse"
@@ -36,7 +55,7 @@ with col1:
     )
 with col2:
     st.metric(
-        label="Yesterday",
+        label="Previous close",
         value=f"${yesterday_price:,.2f}"
     )
 
@@ -63,7 +82,7 @@ selected_range = st.radio(
 )
 
 params = range_options[selected_range]
-data = requests.get(f"{API_URL}/sp500/prices/history", params=params).json()
+data = requests.get(f"{API_URL}/market/{ticker}/history", params=params).json()
 
 dates = [row["date"] for row in data]
 closes = [row["close"] for row in data]
@@ -75,7 +94,7 @@ fig.add_trace(go.Scatter(
     x=dates,
     y=closes,
     mode="lines",
-    name="S&P 500",
+    name=ticker,
     line=dict(color="#00C805", width=1.5),
     fill="tozeroy",
     fillcolor="rgba(0, 200, 5, 0.05)"

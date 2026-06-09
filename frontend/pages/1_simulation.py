@@ -4,6 +4,19 @@ import requests
 
 API_URL = "http://backend:8000"
 
+TICKERS = {
+    "^GSPC": "S&P 500",
+    "^DJI": "Dow Jones",
+    "^IXIC": "NASDAQ",
+    "^FTSE": "FTSE 100",
+    "^DAX": "DAX",
+    "^FCHI": "CAC 40",
+    "^N225": "Nikkei 225",
+    "^HSI": "Hang Seng",
+    "GC=F": "Gold",
+    "BTC-USD": "Bitcoin"
+}
+
 st.set_page_config(
     page_title="Investment Simulator",
     page_icon="💰",
@@ -11,7 +24,25 @@ st.set_page_config(
 )
 
 st.title("💰 Simulate Your Investment")
-st.markdown("Calculate how your investment would grow over time in the S&P 500.")
+st.markdown("Calculate how your investment would grow over time based on historical data.")
+
+st.divider()
+
+# Ticker selection
+col_ticker, col_empty = st.columns([1, 3])
+with col_ticker:
+    ticker = st.selectbox(
+        "Select Ticker",
+        options=list(TICKERS.keys()),
+        format_func=lambda x: TICKERS.get(x, x)
+    )
+
+# Load historical stats
+stats = requests.get(f"{API_URL}/market/{ticker}/stats").json()
+default_rate = round(stats.get("cagr", 0.07) * 100, 2)
+default_volatility = round(stats.get("annual_volatility", 0.15) * 100, 2)
+
+st.info(f"📊 Historical CAGR for {TICKERS[ticker]}: **{default_rate}%** | Historical Volatility: **{default_volatility}%**")
 
 st.divider()
 
@@ -86,7 +117,7 @@ if st.button("Simulate", type="primary", use_container_width=True):
                 delta=f"{compound['total_interest']:,.0f} interest"
             )
         with col3:
-            roi = (compound["total_interest"] / compound["total_invested"]) * 100
+            roi = (compound["total_interest"] / compound["total_invested"]) * 100 if compound["total_invested"] > 0 else 0
             st.metric(
                 label="Return on Investment",
                 value=f"{roi:.1f}%"
