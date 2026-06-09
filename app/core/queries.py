@@ -55,6 +55,7 @@ def get_latest_price(session: Session, ticker: str) -> MarketPrice:
 
 def get_daily_returns(
     session: Session,
+    ticker: str,
     start_date: date = None,
     end_date: date = None,
 ) -> list[dict]:
@@ -127,11 +128,11 @@ def get_available_tickers(session: Session) -> list[str]:
 def get_last_date_for_ticker(session: Session, ticker: str) -> date | None:
     """
     Get the last date for a given ticker.
-    
+
     Args:
         session: SQLAlchemy session
         ticker: Ticker symbol
-        
+
     Returns:
         Last date for the ticker
     """
@@ -142,6 +143,7 @@ def get_last_date_for_ticker(session: Session, ticker: str) -> date | None:
         .first()
     )
     return result[0] if result else None
+
 
 def get_annualized_return(session: Session, ticker: str) -> dict:
     """
@@ -160,10 +162,10 @@ def get_annualized_return(session: Session, ticker: str) -> dict:
         .order_by(MarketPrice.date.asc())
         .all()
     )
-    
+
     if len(prices) < 2:
         return {"annual_return": 0.0, "annual_volatility": 0.0}
-    
+
     daily_returns = []
     for i in range(1, len(prices)):
         prev = prices[i - 1].close
