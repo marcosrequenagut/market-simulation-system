@@ -9,7 +9,7 @@ TICKERS = {
     "^DJI": "Dow Jones",
     "^IXIC": "NASDAQ",
     "^FTSE": "FTSE 100",
-    "^DAX": "DAX",
+    "^GDAXI": "DAX",
     "^FCHI": "CAC 40",
     "^N225": "Nikkei 225",
     "^HSI": "Hang Seng",

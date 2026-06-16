@@ -33,7 +33,7 @@ def get_forecast(
 @router.get("/{ticker}/backtest")
 def get_backtest(ticker: str):
     clean_ticker = ticker.replace("^", "")
-    path = f"ml/data/backtest_xgb_{clean_ticker}.csv"
+    path = f"ml/data/{clean_ticker}/backtest_xgb_{clean_ticker}.csv"
 
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Backtest data not found")

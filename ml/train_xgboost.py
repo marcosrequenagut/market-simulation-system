@@ -7,6 +7,7 @@ import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from ml.features import load_prices, build_features, FEATURE_COLUMNS
+import os
 
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -84,6 +85,10 @@ def train_xgboost(
         mlflow.log_metric("rmse", round(rmse, 4))
         mlflow.log_metric("mape", round(mape, 4))
 
+        # Create a directory for each ticker
+        ticker_dir = f"ml/data/{ticker.replace('^', '')}"
+        os.makedirs(ticker_dir, exist_ok=True)
+
         # Feature importance
         importance = pd.DataFrame({
             "feature": FEATURE_COLUMNS,
@@ -93,7 +98,7 @@ def train_xgboost(
         print("\nTop 10 Feature Importances:")
         print(importance.to_string(index=False))
 
-        importance_path = f"ml/data/feature_importance_xgb_{ticker.replace('^', '')}.csv"
+        importance_path = f"{ticker_dir}/feature_importance_xgb_{ticker.replace('^', '')}.csv"
         importance.to_csv(importance_path, index=False)
         mlflow.log_artifact(importance_path)
 
@@ -123,7 +128,7 @@ def train_xgboost(
             "predicted_price_cumulative": predicted_prices_cumulative
         })
 
-        backtest_path = f"ml/data/backtest_xgb_{ticker.replace('^', '')}.csv"
+        backtest_path = f"{ticker_dir}/backtest_xgb_{ticker.replace('^', '')}.csv"
         backtest_df.to_csv(backtest_path, index=False)
         mlflow.log_artifact(backtest_path)
 
@@ -211,11 +216,11 @@ def train_xgboost(
             "predicted_price": future_prices,
         })
 
-        future_path = f"ml/data/future_xgb_{ticker.replace('^', '')}.csv"
+        future_path = f"{ticker_dir}/future_xgb_{ticker.replace('^', '')}.csv"
         future_df.to_csv(future_path, index=False)
         mlflow.log_artifact(future_path)
 
-        model_path = f"ml/models/xgb_model_{ticker.replace('^', '')}.json"
+        model_path = f"{ticker_dir}/xgb_model_{ticker.replace('^', '')}.json"
         model.save_model(model_path)
         mlflow.log_artifact(model_path)
 
