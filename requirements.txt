@@ -14,3 +14,4 @@ python-dateutil
 statsmodels
 scikit-learn
 xgboost
+mlflow==2.13.0

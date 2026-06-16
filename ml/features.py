@@ -82,7 +82,9 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     df["bb_position"] = (df["close"] - df["bb_lower"]) / (df["bb_upper"] - df["bb_lower"])
 
     # Target: next day return (what we want to predict)
-    df["target"] = df["close"].shift(-1)
+    # We predict returns instead of absolute price because returns are
+    # stationary while price is not, which makes the model generalize better
+    df["target"] = df["close"].pct_change(-1)
     
     df = df.dropna()
 
