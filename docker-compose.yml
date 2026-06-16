@@ -47,5 +47,34 @@ services:
     volumes:
       - ./frontend:/app
 
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.13.0
+    container_name: market_mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+
+  training:
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+    container_name: market_training
+    depends_on:
+      - postgres
+      - mlflow
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/market_data
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - .:/app
+
 volumes:
   pgdata:
+  mlflow_data:
