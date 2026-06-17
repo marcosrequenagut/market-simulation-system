@@ -22,7 +22,7 @@ TICKERS = {
     "^DJI": "Dow Jones",
     "^IXIC": "NASDAQ",
     "^FTSE": "FTSE 100",
-    "^DAX": "DAX",
+    "^GDAXI": "DAX",
     "^FCHI": "CAC 40",
     "^N225": "Nikkei 225",
     "^HSI": "Hang Seng",
@@ -96,7 +96,23 @@ def ingest_ticker(ticker: str) -> None:
         })
 
         df = df[["date", "ticker", "open", "high", "low", "close", "volume"]]
-        
+
+        df = df.dropna(subset=["open", "high", "low", "close"])
+
+        # Filter out dates that already exist for this ticker
+        with engine.connect() as conn:
+            existing_dates = pd.read_sql(
+                text("SELECT date FROM market_prices WHERE ticker = :ticker"),
+                conn,
+                params={"ticker": ticker}
+            )["date"].tolist()
+
+        df = df[~df["date"].isin(existing_dates)]
+
+        if df.empty:
+            logger.info(f"{ticker}: No new rows to insert")
+            return
+
         df.to_sql(
             "market_prices",
             engine,
@@ -108,7 +124,6 @@ def ingest_ticker(ticker: str) -> None:
 
     except Exception as e:
         logger.error(f"{ticker}: Error during ingestion - {e}")
-        raise
 
 
 def ingest_all() -> None:
