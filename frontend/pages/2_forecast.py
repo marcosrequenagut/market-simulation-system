@@ -70,22 +70,26 @@ if st.button("Generate Forecast", type="primary", use_container_width=True):
             with col1:
                 st.metric(
                     label="Last known price",
-                    value=f"${last_price:.2f}"
+                    value=f"${last_price:,.2f}"
                 )
             with col2:
+                color = "#00C805" if change >= 0 else "#FF4B4B"
+                arrow = "▲" if change >= 0 else "▼"
                 st.metric(
                     label=f"Forecast in {forecast_days} days",
                     value=f"${final_price:,.2f}",
-                    delta=f"{change_pct:+.2f}%",
-                    delta_color="normal" if change >= 0 else "inverse"
                 )
+                st.markdown(f'<p style="color:{color}; font-size:14px;">{arrow} {change_pct:+.2f}%</p>', unsafe_allow_html=True)
             with col3:
+                color = "#00C805" if change >= 0 else "#FF4B4B"
+                arrow = "▲" if change >= 0 else "▼"
+                label = "gain" if change >= 0 else "loss"
+                value = f"${abs(change):,.2f}" if change >= 0 else f"-${abs(change):,.2f}"
                 st.metric(
-                    label="Absolute change",
-                    value=f"${abs(change):,.2f}",
-                    delta="gain" if change >= 0 else "loss",
-                    delta_color="normal" if change >= 0 else "inverse"
+                    label="Price change",
+                    value=value,
                 )
+                st.markdown(f'<p style="color:{color}; font-size:14px;">{arrow} {label}</p>', unsafe_allow_html=True)
 
             st.divider()
 
