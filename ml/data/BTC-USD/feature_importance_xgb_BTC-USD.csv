@@ -1,0 +1,11 @@
+feature,importance
+volatility_60d,0.10606025
+return_5d,0.10579603
+return_20d,0.10370542
+rsi_14,0.1025985
+volatility_20d,0.101729125
+price_ma200_ratio,0.100104414
+ma_7_21_ratio,0.09747743
+bb_position,0.09643259
+return_1d,0.09463255
+ma_21_50_ratio,0.09146366
