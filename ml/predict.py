@@ -3,25 +3,67 @@ import pandas as pd
 import xgboost as xgb
 from ml.features import load_prices, build_features, FEATURE_COLUMNS
 import mlflow
+import mlflow.statsmodels
 
 def load_xgb_model(ticker: str):
+    """
+    Load the latest registered XGBoost model for a given ticker from MLflow.
+
+    Args:
+        ticker: Ticker symbol
+
+    Returns:
+        Loaded XGBoost (xgboost) fitted model
+
+    Raises:
+        Exception: If no registered model exists for this ticker
+    """
     model_name = f"xgboost_model_{ticker.replace('^', '')}"
     
-    # Busca la última versión registrada via cliente HTTP
     client = mlflow.tracking.MlflowClient()
     versions = client.search_model_versions(f"name='{model_name}'")
     
     if not versions:
         raise Exception(f"No registered model found for {model_name}")
     
-    # Coge la versión con el número más alto
     latest = sorted(versions, key=lambda v: int(v.version))[-1]
     
-    # Construye URI con versión explícita, no con 'latest'
     model_uri = f"models:/{model_name}/{latest.version}"
     
     model = mlflow.xgboost.load_model(model_uri)
     return model
+
+def load_sarima_model(ticker: str):
+    """
+    Load the latest registered SARIMA model for a given ticker from MLflow.
+
+    Args:
+        ticker: Ticker symbol
+
+    Returns:
+        Loaded SARIMA (statsmodels) fitted model
+
+    Raises:
+        Exception: If no registered model exists for this ticker
+    """
+    model_name = f"sarima_model_{ticker.replace('^', '')}"
+    
+    # Search the last registred version using the client HTTP
+    client = mlflow.tracking.MlflowClient()
+    versions = client.search_model_versions(f"name='{model_name}'")
+    
+    if not versions:
+        raise Exception(f"No registered model found for {model_name}")
+    
+    # Take the version with the highest number
+    latest = sorted(versions, key=lambda v: int(v.version))[-1]
+    
+    # Build URI with explicit version, not with 'latest'
+    model_uri = f"models:/{model_name}/{latest.version}"
+    
+    model = mlflow.statsmodels.load_model(model_uri)
+    return model
+
 
 def forecast_xgboost(ticker: str, forecast_days: int = 30) -> pd.DataFrame:
     """
@@ -108,6 +150,52 @@ def forecast_xgboost(ticker: str, forecast_days: int = 30) -> pd.DataFrame:
     result_df = pd.DataFrame({
         "date": future_dates,
         "predicted_return": future_returns,
+        "previous_price": previous_prices,
+        "predicted_price": future_prices
+    })
+
+    return result_df
+
+def forecast_sarima(ticker: str, forecast_days: int = 30) -> pd.DataFrame:
+    """
+    Generate a price forecast using a trained SARIMA model
+    and the most recent real data from the database.
+
+    Args:
+        ticker: Ticker symbol
+        forecast_days: Number of business days to forecast ahead
+
+    Returns:
+        DataFrame with date, predicted_return, previous_price, predicted_price
+    """
+    model = load_sarima_model(ticker)
+
+    df = load_prices(ticker)
+    df = df.last("10Y")
+
+    last_known_price = float(df["close"].iloc[-1])
+
+    future_returns = model.forecast(steps=forecast_days)
+
+    future_dates = pd.date_range(
+        start=df.index[-1],
+        periods=forecast_days + 1,
+        freq="B"
+    )[1:]
+
+    current_price = last_known_price
+    future_prices = []
+    previous_prices = []
+
+    for predicted_return in future_returns.values:
+        previous_price = current_price
+        current_price = current_price * (1 + predicted_return)
+        previous_prices.append(previous_price)
+        future_prices.append(current_price)
+
+    result_df = pd.DataFrame({
+        "date": future_dates,
+        "predicted_return": future_returns.values,
         "previous_price": previous_prices,
         "predicted_price": future_prices
     })

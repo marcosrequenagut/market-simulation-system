@@ -38,15 +38,17 @@ def check_stationarity(series: pd.Series) -> dict:
 
 def train_sarima(
     ticker: str = "^GSPC",
-    order: tuple = (1, 1, 1),
-    seasonal_order: tuple = (1, 1, 1, 5),
-    test_size: float = 0.05,
+    order: tuple = (1, 0, 1),
+    seasonal_order: tuple = (1, 0, 1, 5),
+    test_size: float = 0.2,
     forecast_days: int = 30
 ):
     """
-    Train a SARIMA model on closing prices and log results to MLflow.
-    Uses d=1 differencing internally to handle non-stationarity.
-    Reconstructs price from differenced predictions.
+    Train a SARIMA model on daily returns (not absolute price) and log
+    results to MLflow. Returns are stationary by nature, so no
+    differencing (d=0) is typically needed, unlike with raw prices.
+    Prices are reconstructed recursively from predicted returns,
+    using the same approach as the XGBoost model for fair comparison.
 
     Args:
         ticker: Ticker symbol
@@ -58,23 +60,23 @@ def train_sarima(
     print(f"Loading data for {ticker}...")
     df = load_prices(ticker)
     df = df.last("10Y")
-    series = df["close"]
 
-    # Extracts just the closing prices as a pandas Series.
-    # Stationarity check on original series and differenced series
-    stationarity_original = check_stationarity(series)
-    stationarity_differenced = check_stationarity(series.diff().dropna())  # Diff() calculates day-over-day changes
+    prices = df["close"]
+    returns = prices.pct_change().dropna()
+
+    # Extracts just the closing prices as a pandas returns.
+    # Stationarity check on original returns and differenced returns
+    stationarity_returns = check_stationarity(returns)
     
-    print(f"Original series stationarity p-value: {stationarity_original['p_value']}")
-    print(f"Differenced series stationarity p-value: {stationarity_differenced['p_value']}")
-    print(f"Is stationary after diff: {stationarity_differenced['is_stationary']}")
+    print(f"Returns stationarity p-value: {stationarity_returns['p_value']}")
+    print(f"Is stationary: {stationarity_returns['is_stationary']}")
 
     # Train/test split
-    split_idx = int(len(series) * (1 - test_size))
-    train = series[:split_idx]
-    test = series[split_idx:]
+    split_idx = int(len(returns) * (1 - test_size))
+    train_returns = returns[:split_idx]
+    test_returns = returns[split_idx:]
 
-    print(f"Train size: {len(train)} | Test size: {len(test)}")
+    print(f"Train size: {len(train_returns)} | Test size: {len(test_returns)}")
     
     with mlflow.start_run(run_name=f"SARIMA_{ticker}"):
         
@@ -83,15 +85,15 @@ def train_sarima(
         mlflow.log_param("model", "SARIMA")
         mlflow.log_param("order", str(order))
         mlflow.log_param("seasonal_order", str(seasonal_order))
-        mlflow.log_param("train_size", len(train))
-        mlflow.log_param("test_size", len(test))
+        mlflow.log_param("train_size", len(train_returns))
+        mlflow.log_param("test_size", len(test_returns))
         mlflow.log_param("forecast_days", forecast_days)
-        mlflow.log_param("stationarity_p_value_original", stationarity_original["p_value"])
-        mlflow.log_param("stationarity_p_value_diff", stationarity_differenced["p_value"])
+        mlflow.log_param("stationarity_p_value", stationarity_returns["p_value"])
+        mlflow.log_param("is_stationary", stationarity_returns["is_stationary"])
 
         print("Training SARIMA model...")
         model = SARIMAX(
-            train,
+            train_returns,
             order=order,
             seasonal_order=seasonal_order,
             enforce_stationarity=False,
@@ -103,74 +105,103 @@ def train_sarima(
         fitted_model = model.fit(disp=False)
 
         # BACKTEST: predict on test set
-        # Generates predictions for all test period dates (1 year ahead from each point)
-        forecast_test = fitted_model.forecast(steps=len(test))
-        # Aligns predictions with actual dates for proper comparison
-        forecast_test = pd.Series(forecast_test.values, index=test.index)
+        # Each predicted return is applied to the actual previous-day price,
+        # so the model is only evaluated on a single-step-ahead basis
+        # (errors do not accumulate)
+        predicted_returns = fitted_model.forecast(steps=len(test_returns))
+        predicted_returns.index = test_returns.index
+
+        actual_prices = prices.loc[test_returns.index]
+        previous_actual_prices = prices.shift(1).loc[test_returns.index]
+
+        anchored_predicted_prices = previous_actual_prices * (1 + predicted_returns)
 
         # Metrics on price directly
-        mae = mean_absolute_error(test, forecast_test)
-        rmse = np.sqrt(mean_squared_error(test, forecast_test))
-        mape = np.mean(np.abs((test.values - forecast_test.values) / test.values)) * 100
+        price_mae = mean_absolute_error(actual_prices, anchored_predicted_prices)
+        price_rmse = np.sqrt(mean_squared_error(actual_prices, anchored_predicted_prices))
+        price_mape = np.mean(np.abs((actual_prices.values - anchored_predicted_prices.values) / actual_prices.values)) * 100
         
-        print(f"Test MAE: {mae:.4f}")
-        print(f"Test RMSE: {rmse:.4f}")
-        print(f"Test MAPE: {mape:.4f}")
+        print(f"Test MAE: {price_mae:.4f}")
+        print(f"Test RMSE: {price_rmse:.4f}")
+        print(f"Test MAPE: {price_mape:.4f}")
         
-        mlflow.log_metric("test_mae", mae)
-        mlflow.log_metric("test_rmse", rmse)
-        mlflow.log_metric("test_mape", mape)
+        mlflow.log_metric("test_mae", price_mae)
+        mlflow.log_metric("test_rmse", price_rmse)
+        mlflow.log_metric("test_mape", price_mape)
         mlflow.log_metric("aic", round(fitted_model.aic, 4))
         mlflow.log_metric("bic", round(fitted_model.bic, 4))
 
+        # Create a directory for each ticker
+        ticker_dir = f"ml/data/{ticker.replace('^', '')}"
+        os.makedirs(ticker_dir, exist_ok=True)
+
+        # BACKTEST: cumulative version
+        # Starts from the first real price in the test set and recursively
+        # applies each predicted return to the previous PREDICTED price,
+        # mirroring exactly how the future forecast behaves in production
+        cumulative_prices = []
+        current_price = float(prices.loc[train_returns.index[-1]])
+
+        for predicted_return in predicted_returns.values:
+            current_price = current_price * (1 + predicted_return)
+            cumulative_prices.append(current_price)
+
+        backtest_df = pd.DataFrame({
+            "date": test_returns.index,
+            "actual_return": test_returns.values,
+            "predicted_return": predicted_returns.values,
+            "actual_price": actual_prices.values,
+            "predicted_price": anchored_predicted_prices.values,
+            "predicted_price_cumulative": cumulative_prices
+        })
+
+        backtest_path = f"{ticker_dir}/backtest_sarima_{ticker.replace('^', '')}.csv"
+        backtest_df.to_csv(backtest_path, index=False)
+        mlflow.log_artifact(backtest_path)
+
         # Future forecast
         # Predicts prices for next 365 business days (1 year ahead from last known date)
-        future_forecast = fitted_model.forecast(steps=forecast_days)
+        print(f"\nGenerating future forecast for {forecast_days} business days...")
+        future_returns = fitted_model.forecast(steps=forecast_days)
+
         future_dates = pd.date_range(
-            start=series.index[-1],  # Begins from last actual date
+            start=prices.index[-1],  # Begins from last actual date
             periods=forecast_days + 1,  # Creates forecast_days+1 dates
             freq="B"  # business days only
         )[1:]  # Drops first date (which is the last known date)
 
-        future_series = pd.Series(future_forecast.values, index=future_dates)
+        last_known_price = float(prices.iloc[-1])
+        current_price = last_known_price
+        future_prices = []
+        previous_prices = []
 
-        # Confidence intervals
-        forecast_result = fitted_model.get_forecast(steps=forecast_days)
-        conf_int = forecast_result.conf_int()
+        for predicted_return in future_returns.values:
+            previous_price = current_price
+            current_price = current_price * (1 + predicted_return)
+            previous_prices.append(previous_price)
+            future_prices.append(current_price)
 
-        # Save backtest results
-        backtest_df = pd.DataFrame({
-            "date": test.index,
-            "actual": test.values,
-            "predicted": forecast_test.values
-        })
-        # Saves backtest results to CSV file
-        backtest_path = f"ml/data/backtest_sarima_{ticker.replace('^', '')}.csv"
-        backtest_df.to_csv(backtest_path, index=False)
-        mlflow.log_artifact(backtest_path)
-
-        # Save future forecast
         future_df = pd.DataFrame({
             "date": future_dates,
-            "predicted": future_forecast.values,
-            "lower_ci": conf_int.iloc[:, 0].values,
-            "upper_ci": conf_int.iloc[:, 1].values
+            "predicted_return": future_returns.values,
+            "previous_price": previous_prices,
+            "predicted_price": future_prices
         })
-        future_path = f"ml/data/future_sarima_{ticker.replace('^', '')}.csv"
+        future_path = f"{ticker_dir}/future_sarima_{ticker.replace('^', '')}.csv"
         future_df.to_csv(future_path, index=False)
         mlflow.log_artifact(future_path)
+        
+        print(f"Last known price: {last_known_price:.2f}")
+        print(f"Forecast in {forecast_days} business days: {future_prices[-1]:.2f}")
 
-        print(f"Future forecast saved {forecast_days} days ahead")
-        print(f"Last known price: {series.iloc[-1]:.2f}")
-        print(f"Forecast in {forecast_days} days: {future_series.iloc[-1]:.2f}")
+        # Register model in MLflow Model Registry
+        model_name = f"sarima_model_{ticker.replace('^', '')}"
+        mlflow.statsmodels.log_model(
+            fitted_model,
+            artifact_path="model",
+            registered_model_name=model_name
+        ) 
 
-        # Reemplaza esto:
-        mlflow.statsmodels.log_model(fitted_model, "sarima_model")
-
-        # Por esto:
-        model_path = f"ml/data/model_sarima_{ticker.replace('^', '')}.pkl"
-        fitted_model.save(model_path)
-        mlflow.log_artifact(model_path)
         print("Run logged to MLflow")
 
     return fitted_model, future_df
@@ -178,7 +209,7 @@ def train_sarima(
 if __name__ == "__main__":
     train_sarima(
         ticker="^GSPC",
-        order=(1, 1, 1),
-        seasonal_order=(1, 1, 1, 5),
+        order=(1, 0, 1),
+        seasonal_order=(1, 0, 1, 5),
         forecast_days=30
     )

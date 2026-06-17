@@ -143,16 +143,17 @@ def get_last_date_for_ticker(session: Session, ticker: str) -> date | None:
     )
     return result[0] if result else None
 
-def get_annualized_return(session: Session, ticker: str) -> dict:
+def get_annualized_return(session: Session, ticker: str, inflation_rate: float = 0.02) -> dict:
     """
     Calculate annualized return and volatility for a given ticker.
 
     Args:
         session: SQLAlchemy session
         ticker: Ticker symbol
+        inflation_rate: Inflation rate to adjust for (default: 0.02)
 
     Returns:
-        Dictionary with annual_return and annual_volatility
+        Dictionary with annual_return, annual_volatility, cagr, real_cagr
     """
     prices = (
         session.query(MarketPrice)
@@ -182,8 +183,12 @@ def get_annualized_return(session: Session, ticker: str) -> dict:
 
     cagr = (last_price / first_price) ** (1 / years) - 1
 
+    # Real CAGR (adjusted for inflation) Using the Fischer ecuation
+    real_cagr = (1 + cagr) / (1 + inflation_rate) - 1
     return {
         "annual_return": round(annual_return, 4),
         "annual_volatility": round(annual_volatility, 4),
-        "cagr": round(cagr, 4)
+        "cagr": round(cagr, 4),
+        "real_cagr": round(real_cagr, 4),
+        "inflation_rate": inflation_rate
     }

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from ml.predict import forecast_xgboost
+from ml.predict import forecast_xgboost, forecast_sarima
 import pandas as pd
 import os
 
@@ -9,10 +9,15 @@ router = APIRouter(prefix="/forecast", tags=["forecast"])
 @router.get("/{ticker}")
 def get_forecast(
     ticker: str,
-    days: int = Query(default=30, ge=1, le=180, description="Business days to forecast")
+    days: int = Query(default=30, ge=1, le=180, description="Business days to forecast"),
+    model: str = Query(default="xgboost", description="Model to use: xgboost or sarima")
 ):
     try:
-        df = forecast_xgboost(ticker, days)
+        if model == "sarima":
+            df = forecast_sarima(ticker, days)
+        else:
+            df = forecast_xgboost(ticker, days)
+
         return {
             "ticker": ticker,
             "forecast_days": days,

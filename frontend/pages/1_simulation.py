@@ -40,9 +40,13 @@ with col_ticker:
 # Load historical stats
 stats = requests.get(f"{API_URL}/market/{ticker}/stats").json()
 default_rate = round(stats.get("cagr", 0.07) * 100, 2)
+real_rate = round(stats.get("real_cagr", 0.07) * 100, 2)
 default_volatility = round(stats.get("annual_volatility", 0.15) * 100, 2)
 
-st.info(f"📊 Historical CAGR for {TICKERS[ticker]}: **{default_rate}%** | Historical Volatility: **{default_volatility}%**")
+st.info(
+    f"📊 Historical CAGR for {TICKERS[ticker]}: **{default_rate}%** (nominal) | "
+    f"**{real_rate}%** (inflation-adjusted) | Historical Volatility: **{default_volatility}%**"
+)
 
 st.divider()
 
@@ -80,9 +84,9 @@ with col4:
     annual_rate = st.number_input(
         "Expected Annual Return (%)",
         min_value=0.0,
-        max_value=30.0,
-        value=7.0,
-        step=0.5
+        value=default_rate,
+        step=0.5,
+        help=f"Pre-filled with the historical CAGR for {TICKERS[ticker]}. You can override it."
     ) / 100
 
 st.divider()

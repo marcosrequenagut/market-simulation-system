@@ -96,11 +96,11 @@ def price_history(
 
 
 @router.get("/{ticker}/stats")
-def ticker_stats(ticker: str, db: Session = Depends(get_db)):
+def ticker_stats(ticker: str, inflation_rate: float = 0.02, db: Session = Depends(get_db)):
     """
-    Get annualized return for a ticker.
+    Get annualized return for a ticker, adjusted for inflation.
     """
-    data = get_annualized_return(db, ticker)
+    data = get_annualized_return(db, ticker, inflation_rate)
     if not data:
         raise HTTPException(status_code=404, detail="No data found")
     return data

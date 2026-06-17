@@ -52,16 +52,26 @@ st.divider()
 if st.button("Generate Forecast", type="primary", use_container_width=True):
     
     with st.spinner("Running XGBoost model..."):
-        response = requests.get(
+        response_xgboost = requests.get(
             f"{API_URL}/forecast/{ticker}",
-            params={"days": forecast_days}
+            params={"days": forecast_days, "model": "xgboost"}
         )
 
-        if response.status_code == 200:
-            data = response.json()
+        response_sarima = requests.get(
+            f"{API_URL}/forecast/{ticker}",
+            params={"days": forecast_days, "model": "sarima"}
+        )
+
+        if response_xgboost.status_code == 200 and response_sarima.status_code == 200:
+            data = response_xgboost.json()
+            data_sarima = response_sarima.json()
+
             forecast = data["forecast"]
+            forecast_sarima_list = data_sarima["forecast"]
+
             last_price = data["last_known_price"]
             final_price = data["forecasted_price"]
+            final_price_sarima = data_sarima["forecasted_price"]
             change = final_price - last_price
             change_pct = (change / last_price) * 100
 
@@ -90,6 +100,76 @@ if st.button("Generate Forecast", type="primary", use_container_width=True):
                     value=value,
                 )
                 st.markdown(f'<p style="color:{color}; font-size:14px;">{arrow} {label}</p>', unsafe_allow_html=True)
+
+            st.divider()
+
+            # Forecast chart - XGBoost vs SARIMA
+            st.subheader("Forecasted Price")
+
+            dates = [row["date"] for row in forecast]
+            prices = [row["predicted_price"] for row in forecast]
+
+            dates_sarima = [row["date"] for row in forecast_sarima_list]
+            prices_sarima = [row["predicted_price"] for row in forecast_sarima_list]
+
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatter(
+                x=dates,
+                y=prices,
+                mode="lines",
+                name="XGBoost",
+                line=dict(color="#00C805", width=2)
+            ))
+
+            fig.add_trace(go.Scatter(
+                x=dates_sarima,
+                y=prices_sarima,
+                mode="lines",
+                name="SARIMA",
+                line=dict(color="#FFA500", width=2)
+            ))
+
+            fig.add_hline(
+                y=last_price,
+                line_dash="dash",
+                line_color="#888888",
+                annotation_text=f"Last price: ${last_price:,.2f}",
+                annotation_position="bottom right"
+            )
+
+            y_values = prices + prices_sarima + [last_price]
+            y_min = min(y_values) * 0.98
+            y_max = max(y_values) * 1.02
+
+            fig.update_layout(
+                height=450,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(
+                    showgrid=False,
+                    color="#888",
+                    title="Date"
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor="rgba(255,255,255,0.1)",
+                    color="#888",
+                    tickprefix="$",
+                    range=[y_min, y_max]
+                ),
+                hovermode="x unified",
+                margin=dict(l=0, r=0, t=20, b=0),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                )
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
             st.divider()
 
