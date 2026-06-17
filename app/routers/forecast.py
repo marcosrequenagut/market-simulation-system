@@ -37,7 +37,7 @@ def get_backtest(ticker: str):
 
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Backtest data not found")
-    
+
     try:
         df = pd.read_csv(path)
         df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
